@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { FiveActionOutput } from '@jobops/shared-types';
+import { apiFetchJobs } from '@/lib/client-api';
 
 interface AutomationJob {
   id: string;
@@ -14,9 +15,9 @@ export default function AutomationPage() {
   const [jobs, setJobs] = useState<AutomationJob[]>([]);
 
   useEffect(() => {
-    fetch('/api/jobs?decision=qualified')
-      .then((r) => r.json())
-      .then((d) => setJobs((d.jobs ?? []).filter((j: AutomationJob) => j.actions)));
+    apiFetchJobs({ decision: 'qualified' }).then((d) =>
+      setJobs((d.jobs ?? []).filter((j: AutomationJob) => j.actions))
+    );
   }, []);
 
   return (
@@ -36,7 +37,7 @@ export default function AutomationPage() {
           >
             <div className="flex items-center justify-between">
               <Link
-                href={`/jobs/${item.id}`}
+                href={`/jobs?id=${item.id}`}
                 className="font-medium text-sky-400 hover:underline"
               >
                 {item.job.title}

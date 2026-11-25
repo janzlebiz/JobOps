@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type {
   JobEvaluation,
   NormalizedJob,
@@ -348,9 +347,17 @@ export function computeMaterialHash(job: NormalizedJob): string {
     employerName: job.employer.name,
     postedAt: job.postedAt,
   };
-  return createHash('sha256')
-    .update(JSON.stringify(materialPayload))
-    .digest('hex');
+  const input = JSON.stringify(materialPayload);
+  let h1 = 0x811c9dc5;
+  let h2 = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input.charCodeAt(i);
+    h1 ^= ch;
+    h1 = Math.imul(h1, 0x01000193);
+    h2 ^= ch ^ (i & 0xff);
+    h2 = Math.imul(h2, 0x01000193);
+  }
+  return (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0');
 }
 
 export function detectMaterialChanges(

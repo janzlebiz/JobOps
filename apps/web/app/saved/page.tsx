@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getOfflineSavedJobs, type OfflineSavedJob } from '@/lib/offline-db';
+import { apiFetchJobs } from '@/lib/client-api';
 
 interface ServerSavedJob {
   id: string;
@@ -16,8 +17,7 @@ export default function SavedPage() {
 
   useEffect(() => {
     getOfflineSavedJobs().then(setOfflineSaved);
-    fetch('/api/jobs')
-      .then((r) => r.json())
+    apiFetchJobs()
       .then((d) => {
         const items = (d.jobs ?? []).filter((j: ServerSavedJob) => j.saved);
         setServerSaved(items);
@@ -50,7 +50,7 @@ export default function SavedPage() {
           ).map((item) => (
             <Link
               key={item.jobId}
-              href={`/jobs/${item.jobId}`}
+              href={`/jobs?id=${item.jobId}`}
               className="block rounded-xl border border-slate-800 bg-slate-900/70 p-4 hover:border-sky-500/50 transition"
             >
               <div className="text-xs uppercase text-sky-400 font-semibold">

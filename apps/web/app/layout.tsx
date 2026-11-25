@@ -2,11 +2,14 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppShell } from '@/components/AppShell';
 
+const basePrefix =
+  process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true' ? '/JobOps' : '';
+
 export const metadata: Metadata = {
   title: 'JobOps Radar',
   description:
     'Personal job-opportunity intelligence platform with 5-action workflow (ASSESS, ANALYZE, APPLY, BUILD, AUTOMATE).',
-  manifest: '/manifest.webmanifest',
+  manifest: `${basePrefix}/manifest.webmanifest`,
 };
 
 export const viewport: Viewport = {

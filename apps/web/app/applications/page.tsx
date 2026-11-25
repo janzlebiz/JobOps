@@ -3,6 +3,10 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, ExternalLink } from 'lucide-react';
+import {
+  apiFetchApplications,
+  apiUpdateApplication,
+} from '@/lib/client-api';
 
 interface ApplicationItem {
   id: string;
@@ -21,11 +25,8 @@ export default function ApplicationsPage() {
   const [error, setError] = useState('');
 
   async function load() {
-    const res = await fetch('/api/applications');
-    if (res.ok) {
-      const data = await res.json();
-      setApps(data.applications ?? []);
-    }
+    const data = await apiFetchApplications();
+    setApps(data.applications ?? []);
   }
 
   useEffect(() => {
@@ -34,21 +35,12 @@ export default function ApplicationsPage() {
 
   async function approveAndMark(id: string, nextStatus: 'approved' | 'applied') {
     setError('');
-    const res = await fetch('/api/applications', {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        id,
-        status: nextStatus,
-        userApproved: true,
-      }),
-    });
-    if (!res.ok) {
-      const d = await res.json();
-      setError(d.error ?? 'Failed to update application');
-      return;
+    try {
+      await apiUpdateApplication(id, nextStatus, true);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update application');
     }
-    await load();
   }
 
   return (
@@ -83,7 +75,7 @@ export default function ApplicationsPage() {
                     {app.platform} · Status: {app.status.replace(/_/g, ' ')}
                   </div>
                   <Link
-                    href={`/jobs/${app.jobId}`}
+                    href={`/jobs?id=${app.jobId}`}
                     className="font-medium text-slate-100 hover:underline"
                   >
                     {app.jobTitle}

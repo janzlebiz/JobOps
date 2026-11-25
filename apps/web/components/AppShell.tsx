@@ -30,7 +30,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      const swPath =
+        process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true'
+          ? '/JobOps/sw.js'
+          : '/sw.js';
+      navigator.serviceWorker.register(swPath).catch(() => {});
     }
 
     const updateStatus = () => {

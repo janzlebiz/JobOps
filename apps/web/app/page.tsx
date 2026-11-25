@@ -10,6 +10,11 @@ import {
   RefreshCw,
   ShieldAlert,
 } from 'lucide-react';
+import {
+  apiDispatchDiscovery,
+  apiFetchJobs,
+  apiFetchSearchRuns,
+} from '@/lib/client-api';
 
 interface JobSummary {
   id: string;
@@ -50,18 +55,12 @@ export default function DashboardPage() {
   const [running, setRunning] = useState(false);
 
   async function load() {
-    const [jobsRes, runsRes] = await Promise.all([
-      fetch('/api/jobs'),
-      fetch('/api/search-runs'),
+    const [jobsData, runsData] = await Promise.all([
+      apiFetchJobs(),
+      apiFetchSearchRuns(),
     ]);
-    if (jobsRes.ok) {
-      const data = await jobsRes.json();
-      setJobs(data.jobs ?? []);
-    }
-    if (runsRes.ok) {
-      const data = await runsRes.json();
-      setRuns(data.runs ?? []);
-    }
+    setJobs(jobsData.jobs ?? []);
+    setRuns(runsData.runs ?? []);
   }
 
   useEffect(() => {
@@ -71,11 +70,7 @@ export default function DashboardPage() {
   async function triggerDiscovery() {
     setRunning(true);
     try {
-      await fetch('/api/worker/dispatch', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ triggerType: 'manual' }),
-      });
+      await apiDispatchDiscovery();
       await load();
     } finally {
       setRunning(false);
@@ -186,7 +181,7 @@ export default function DashboardPage() {
           {qualified.map((item) => (
             <Link
               key={item.id}
-              href={`/jobs/${item.id}`}
+              href={`/jobs?id=${item.id}`}
               className="block rounded-xl border border-slate-800 bg-slate-900/70 hover:border-sky-500/50 p-4 transition"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">

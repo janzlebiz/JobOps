@@ -2,13 +2,13 @@
   "name": "JobOps Radar",
   "short_name": "JobOps",
   "description": "Personal job-opportunity intelligence platform with 5-action workflow",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#0b1120",
   "theme_color": "#1d6feb",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "icon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     }

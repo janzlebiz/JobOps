@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
+import { apiFetchJobs } from '@/lib/client-api';
 
 interface JobItem {
   id: string;
@@ -33,15 +34,9 @@ export default function DiscoverPage() {
   const [sort, setSort] = useState('score');
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (q) params.set('q', q);
-    if (platform !== 'all') params.set('platform', platform);
-    if (decision !== 'all') params.set('decision', decision);
-    params.set('sort', sort);
-
-    fetch(`/api/jobs?${params.toString()}`)
-      .then((r) => r.json())
-      .then((d) => setJobs(d.jobs ?? []));
+    apiFetchJobs({ q, platform, decision, sort }).then((d) =>
+      setJobs(d.jobs ?? [])
+    );
   }, [q, platform, decision, sort]);
 
   return (
@@ -112,7 +107,7 @@ export default function DiscoverPage() {
           return (
             <Link
               key={item.id}
-              href={`/jobs/${item.id}`}
+              href={`/jobs?id=${item.id}`}
               className="block rounded-xl border border-slate-800 bg-slate-900/70 hover:border-sky-500/50 p-4 transition"
             >
               <div className="flex items-start justify-between gap-3">

@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
+import {
+  apiFetchSearchProfile,
+  apiUpdateSearchProfile,
+} from '@/lib/client-api';
 
 interface SearchProfileState {
   maxProposals: number;
@@ -18,21 +22,15 @@ export default function SettingsPage() {
   const [savedMsg, setSavedMsg] = useState('');
 
   useEffect(() => {
-    fetch('/api/search-profiles')
-      .then((r) => r.json())
-      .then((d) => setProfile(d.searchProfile));
+    apiFetchSearchProfile().then((d) => setProfile(d.searchProfile));
   }, []);
 
   async function saveSettings(e: React.FormEvent) {
     e.preventDefault();
     if (!profile) return;
     setSavedMsg('');
-    const res = await fetch('/api/search-profiles', {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(profile),
-    });
-    if (res.ok) setSavedMsg('Settings saved.');
+    await apiUpdateSearchProfile(profile as never);
+    setSavedMsg('Settings saved.');
   }
 
   if (!profile) {
