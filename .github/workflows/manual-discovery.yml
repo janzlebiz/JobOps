@@ -16,9 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger protected worker dispatch
-        if: ${{ secrets.JOBOPS_WEB_URL != '' && secrets.WORKER_DISPATCH_SECRET != '' }}
+        env:
+          JOBOPS_WEB_URL: ${{ secrets.JOBOPS_WEB_URL }}
+          WORKER_DISPATCH_SECRET: ${{ secrets.WORKER_DISPATCH_SECRET }}
         run: |
-          curl -fsS -X POST "${{ secrets.JOBOPS_WEB_URL }}/api/worker/dispatch" \
-            -H "Authorization: Bearer ${{ secrets.WORKER_DISPATCH_SECRET }}" \
+          if [ -z "$JOBOPS_WEB_URL" ] || [ -z "$WORKER_DISPATCH_SECRET" ]; then
+            echo "JOBOPS_WEB_URL or WORKER_DISPATCH_SECRET not set; skipping dispatch."
+            exit 0
+          fi
+          curl -fsS -X POST "${JOBOPS_WEB_URL}/api/worker/dispatch" \
+            -H "Authorization: Bearer ${WORKER_DISPATCH_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{"triggerType":"manual"}'
