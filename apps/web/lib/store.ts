@@ -6,7 +6,9 @@ import type {
 import {
   DemoSeedConnector,
   FreelancerConnector,
+  JobicyConnector,
   OnlineJobsPhConnector,
+  RemotiveConnector,
   UpworkConnector,
 } from '@jobops/source-connectors';
 import {
@@ -111,7 +113,7 @@ const DEFAULT_SEARCH_PROFILE: SearchProfile = {
   userId: 'local-primary-user',
   name: 'Primary Remote Ops Radar',
   enabled: true,
-  platforms: ['upwork', 'freelancer', 'onlinejobs_ph', 'demo_seed'],
+  platforms: ['jobicy', 'remotive', 'upwork', 'freelancer', 'onlinejobs_ph'],
   categories: [
     'spreadsheet_operations',
     'document_processing',
@@ -125,7 +127,7 @@ const DEFAULT_SEARCH_PROFILE: SearchProfile = {
   maxAgeHours: 24,
   minimumCompensation: 5,
   currency: 'USD',
-  includeHiddenCompetition: false,
+  includeHiddenCompetition: true,
   includeUnknownEligibility: false,
   scheduleEnabled: true,
 };
@@ -145,7 +147,7 @@ class JobOpsStore {
   async ensureInitialized(): Promise<void> {
     if (this.initialized) return;
     if (!this.initPromise) {
-      this.initPromise = this.runDiscovery('boot', ['demo_seed']).then(() => {
+      this.initPromise = this.runDiscovery('boot', ['jobicy', 'remotive']).then(() => {
         this.initialized = true;
       });
     }
@@ -169,6 +171,12 @@ class JobOpsStore {
     const platforms = requestedPlatforms ?? this.searchProfile.platforms;
     const connectors = [];
 
+    if (platforms.includes('jobicy')) {
+      connectors.push(new JobicyConnector());
+    }
+    if (platforms.includes('remotive')) {
+      connectors.push(new RemotiveConnector());
+    }
     if (platforms.includes('demo_seed')) {
       connectors.push(new DemoSeedConnector());
     }

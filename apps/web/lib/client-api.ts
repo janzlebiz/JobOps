@@ -1,12 +1,16 @@
 'use client';
 
 import type { ApplicationStatus, SearchProfile, UserProfile } from '@jobops/shared-types';
-import { DemoSeedConnector } from '@jobops/source-connectors';
+import {
+  DemoSeedConnector,
+  JobicyConnector,
+  RemotiveConnector,
+} from '@jobops/source-connectors';
 import { DeterministicFallbackProvider, generateFiveActions } from '@jobops/ai-prompts';
 import { type StoredJobRecord, runDiscoveryPipeline } from '@jobops/worker-pipeline';
 
 const IS_STATIC = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
-const STORAGE_KEY = 'jobops_static_state_v1';
+const STORAGE_KEY = 'jobops_static_state_v2';
 
 const DEFAULT_USER_PROFILE: UserProfile = {
   userId: 'local-primary-user',
@@ -33,7 +37,7 @@ const DEFAULT_SEARCH_PROFILE: SearchProfile = {
   userId: 'local-primary-user',
   name: 'Primary Remote Ops Radar',
   enabled: true,
-  platforms: ['upwork', 'freelancer', 'onlinejobs_ph', 'demo_seed'],
+  platforms: ['jobicy', 'remotive', 'upwork', 'freelancer', 'onlinejobs_ph'],
   categories: ['spreadsheet_operations', 'document_processing', 'inventory_operations', 'database_operations'],
   keywords: ['excel', 'sheets', 'sql', 'inventory', 'invoice', 'reconciliation'],
   maxProposals: 19,
@@ -41,7 +45,7 @@ const DEFAULT_SEARCH_PROFILE: SearchProfile = {
   maxAgeHours: 24,
   minimumCompensation: 5,
   currency: 'USD',
-  includeHiddenCompetition: false,
+  includeHiddenCompetition: true,
   includeUnknownEligibility: false,
   scheduleEnabled: true,
 };
@@ -87,12 +91,20 @@ async function getStaticState(): Promise<StaticState> {
       }
     }
   }
-  const run = await runDiscoveryPipeline({
-    connectors: [new DemoSeedConnector()],
+  let run = await runDiscoveryPipeline({
+    connectors: [new JobicyConnector(), new RemotiveConnector()],
     searchProfile: DEFAULT_SEARCH_PROFILE,
     userProfile: DEFAULT_USER_PROFILE,
     aiProvider: new DeterministicFallbackProvider(),
   });
+  if (run.discoveredCount === 0) {
+    run = await runDiscoveryPipeline({
+      connectors: [new DemoSeedConnector()],
+      searchProfile: DEFAULT_SEARCH_PROFILE,
+      userProfile: DEFAULT_USER_PROFILE,
+      aiProvider: new DeterministicFallbackProvider(),
+    });
+  }
   const state: StaticState = {
     records: run.records,
     savedIds: {},
@@ -186,13 +198,22 @@ export async function apiDispatchDiscovery() {
     if (res.ok) return res.json();
   }
   const state = await getStaticState();
-  const run = await runDiscoveryPipeline({
-    connectors: [new DemoSeedConnector()],
+  let run = await runDiscoveryPipeline({
+    connectors: [new JobicyConnector(), new RemotiveConnector()],
     searchProfile: state.searchProfile,
     userProfile: DEFAULT_USER_PROFILE,
     existingRecords: state.records,
     aiProvider: new DeterministicFallbackProvider(),
   });
+  if (run.discoveredCount === 0 && state.records.length === 0) {
+    run = await runDiscoveryPipeline({
+      connectors: [new DemoSeedConnector()],
+      searchProfile: state.searchProfile,
+      userProfile: DEFAULT_USER_PROFILE,
+      existingRecords: state.records,
+      aiProvider: new DeterministicFallbackProvider(),
+    });
+  }
   state.records = run.records;
   state.runs.unshift({
     runId: run.runId,

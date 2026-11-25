@@ -13,7 +13,7 @@ export function buildDemoJobs(now: Date = new Date()): NormalizedJob[] {
     {
       sourceKey: 'upwork',
       externalId: 'upw-1001',
-      canonicalUrl: 'https://www.upwork.com/jobs/~01upw1001',
+      canonicalUrl: 'https://www.upwork.com/nx/search/jobs/?q=excel%20inventory%20sku',
       title: 'Excel & Google Sheets Inventory SKU Cleanup and Deduplication',
       description:
         'Clean 4,500-row retail SKU export, standardize variant attributes, flag duplicate barcodes, and deliver a clean reconciliation workbook with validation rules. Ongoing weekly updates possible.',
@@ -46,7 +46,7 @@ export function buildDemoJobs(now: Date = new Date()): NormalizedJob[] {
     {
       sourceKey: 'freelancer',
       externalId: 'fl-2002',
-      canonicalUrl: 'https://www.freelancer.com/projects/sql/sql-cleanup-2002',
+      canonicalUrl: 'https://www.freelancer.com/jobs/sql/',
       title: 'SQL Customer & Invoice Table Deduplication Script',
       description:
         'Write PostgreSQL queries to identify duplicate vendor records, reconcile mismatched invoice totals, and export an exception report CSV. Clear deliverables and sample schema provided.',
@@ -79,7 +79,7 @@ export function buildDemoJobs(now: Date = new Date()): NormalizedJob[] {
     {
       sourceKey: 'onlinejobs_ph',
       externalId: 'ojp-3003',
-      canonicalUrl: 'https://www.onlinejobs.ph/jobseekers/job/3003',
+      canonicalUrl: 'https://www.onlinejobs.ph/jobseekers/jobsearch',
       title: 'Part-Time E-Commerce Product & Order Reconciliation Assistant',
       description:
         'Maintain Shopify product variants, update supplier stock sheets, and track shipment exceptions daily. Low-call async role.',
@@ -112,7 +112,7 @@ export function buildDemoJobs(now: Date = new Date()): NormalizedJob[] {
     {
       sourceKey: 'upwork',
       externalId: 'upw-1004',
-      canonicalUrl: 'https://www.upwork.com/jobs/~01upw1004',
+      canonicalUrl: 'https://www.upwork.com/nx/search/jobs/?q=pdf%20invoice%20extraction',
       title: 'PDF Supplier Invoice Extraction to Structured Spreadsheet',
       description:
         'Extract line items from 120 monthly PDF supplier invoices into a standardized Google Sheet with automated sum checks.',
@@ -145,7 +145,7 @@ export function buildDemoJobs(now: Date = new Date()): NormalizedJob[] {
     {
       sourceKey: 'upwork',
       externalId: 'upw-1005',
-      canonicalUrl: 'https://www.upwork.com/jobs/~01upw1005',
+      canonicalUrl: 'https://www.upwork.com/nx/search/jobs/?q=crm%20cleanup',
       title: 'High-Competition Data Entry Role (28 proposals)',
       description: 'Routine CRM cleanup.',
       category: 'crm_operations',
@@ -169,7 +169,7 @@ export function buildDemoJobs(now: Date = new Date()): NormalizedJob[] {
     {
       sourceKey: 'freelancer',
       externalId: 'fl-2006',
-      canonicalUrl: 'https://www.freelancer.com/projects/admin/unpaid-test-2006',
+      canonicalUrl: 'https://www.freelancer.com/jobs/',
       title: 'Complete 20-page unpaid sample audit before contract',
       description: 'Unpaid test assignment required before interview.',
       category: 'quality_operations',
@@ -485,6 +485,175 @@ export class OnlineJobsPhConnector implements JobSourceConnector {
       message: this.feedUrl
         ? 'Authorized feed configured'
         : 'ONLINEJOBS_FEED_URL missing',
+    };
+  }
+}
+
+function parseEligibility(locationText: string): {
+  status: NormalizedJob['eligibilityStatus'];
+  countries: string[];
+} {
+  const lower = locationText.toLowerCase().trim();
+  if (!lower) return { status: 'unknown', countries: [] };
+  if (
+    lower.includes('anywhere') ||
+    lower.includes('worldwide') ||
+    lower.includes('global')
+  ) {
+    return { status: 'worldwide', countries: ['Worldwide'] };
+  }
+  if (lower.includes('philippines')) {
+    return { status: 'philippines', countries: ['Philippines'] };
+  }
+  return { status: 'restricted', countries: [locationText.trim()] };
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 1200);
+}
+
+export class RemotiveConnector implements JobSourceConnector {
+  sourceKey = 'remotive';
+
+  async discover(input: {
+    keywords: string[];
+    categories: string[];
+  }): Promise<DiscoveryPage> {
+    const res = await fetch('https://remotive.com/api/remote-jobs?limit=25');
+    if (!res.ok) {
+      throw new Error(`Remotive API error: ${res.status}`);
+    }
+    const json = (await res.json()) as { jobs?: unknown[] };
+    const jobs = (json.jobs ?? []).map((j) => this.normalize(j));
+    return {
+      sourceKey: this.sourceKey,
+      jobs,
+      fetchedAt: new Date().toISOString(),
+    };
+  }
+
+  normalize(raw: unknown): NormalizedJob {
+    const r = (raw ?? {}) as Record<string, unknown>;
+    const location = String(r.candidate_required_location ?? '');
+    const elig = parseEligibility(location);
+    const posted =
+      typeof r.publication_date === 'string'
+        ? new Date(
+            r.publication_date.endsWith('Z')
+              ? r.publication_date
+              : `${r.publication_date}Z`
+          ).toISOString()
+        : null;
+
+    return {
+      sourceKey: this.sourceKey,
+      externalId: r.id ? String(r.id) : null,
+      canonicalUrl: String(r.url ?? 'https://remotive.com/remote-jobs'),
+      title: String(r.title ?? 'Remote Opportunity'),
+      description: stripHtml(String(r.description ?? '')),
+      category: String(r.category ?? 'administrative_operations')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_'),
+      skillsRequired: Array.isArray(r.tags) ? r.tags.map(String).slice(0, 6) : [],
+      employer: {
+        name: typeof r.company_name === 'string' ? r.company_name : null,
+        businessPresenceVerified: true,
+      },
+      locationText: location || null,
+      remoteType: 'remote',
+      eligibleCountries: elig.countries,
+      eligibilityStatus: elig.status,
+      compensationMin: null,
+      compensationMax: null,
+      compensationCurrency: 'USD',
+      compensationType: 'unknown',
+      proposalCount: null,
+      competitionStatus: 'not_disclosed',
+      postedAt: posted,
+      retrievedAt: new Date().toISOString(),
+      retrievalMethod: 'official_api',
+      rawData: r,
+    };
+  }
+
+  async healthCheck(): Promise<SourceHealth> {
+    return {
+      sourceKey: this.sourceKey,
+      healthy: true,
+      checkedAt: new Date().toISOString(),
+      message: 'Public Remotive API',
+    };
+  }
+}
+
+export class JobicyConnector implements JobSourceConnector {
+  sourceKey = 'jobicy';
+
+  async discover(): Promise<DiscoveryPage> {
+    const res = await fetch('https://jobicy.com/api/v2/remote-jobs?count=25');
+    if (!res.ok) {
+      throw new Error(`Jobicy API error: ${res.status}`);
+    }
+    const json = (await res.json()) as { jobs?: unknown[] };
+    return {
+      sourceKey: this.sourceKey,
+      jobs: (json.jobs ?? []).map((j) => this.normalize(j)),
+      fetchedAt: new Date().toISOString(),
+    };
+  }
+
+  normalize(raw: unknown): NormalizedJob {
+    const r = (raw ?? {}) as Record<string, unknown>;
+    const location = String(r.jobGeo ?? '');
+    const elig = parseEligibility(location);
+    const posted =
+      typeof r.pubDate === 'string' ? new Date(r.pubDate).toISOString() : null;
+
+    return {
+      sourceKey: this.sourceKey,
+      externalId: r.id ? String(r.id) : null,
+      canonicalUrl: String(r.url ?? 'https://jobicy.com/'),
+      title: String(r.jobTitle ?? 'Remote Opportunity'),
+      description: stripHtml(String(r.jobExcerpt ?? r.jobDescription ?? '')),
+      category: Array.isArray(r.jobIndustry) && r.jobIndustry.length > 0
+        ? String(r.jobIndustry[0]).toLowerCase().replace(/[^a-z0-9]+/g, '_')
+        : 'administrative_operations',
+      skillsRequired: [],
+      employer: {
+        name: typeof r.companyName === 'string' ? r.companyName : null,
+        businessPresenceVerified: true,
+      },
+      locationText: location || null,
+      remoteType: 'remote',
+      eligibleCountries: elig.countries,
+      eligibilityStatus: elig.status,
+      compensationMin:
+        typeof r.annualSalaryMin === 'number' ? r.annualSalaryMin : null,
+      compensationMax:
+        typeof r.annualSalaryMax === 'number' ? r.annualSalaryMax : null,
+      compensationCurrency:
+        typeof r.salaryCurrency === 'string' ? r.salaryCurrency : 'USD',
+      compensationType:
+        typeof r.annualSalaryMin === 'number' ? 'monthly' : 'unknown',
+      proposalCount: null,
+      competitionStatus: 'not_disclosed',
+      postedAt: posted,
+      retrievedAt: new Date().toISOString(),
+      retrievalMethod: 'official_api',
+      rawData: r,
+    };
+  }
+
+  async healthCheck(): Promise<SourceHealth> {
+    return {
+      sourceKey: this.sourceKey,
+      healthy: true,
+      checkedAt: new Date().toISOString(),
+      message: 'Public Jobicy API',
     };
   }
 }

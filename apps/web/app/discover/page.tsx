@@ -65,6 +65,8 @@ export default function DiscoverPage() {
           className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm"
         >
           <option value="all">All Platforms</option>
+          <option value="jobicy">Jobicy (Live)</option>
+          <option value="remotive">Remotive (Live)</option>
           <option value="upwork">Upwork</option>
           <option value="freelancer">Freelancer</option>
           <option value="onlinejobs_ph">OnlineJobs.ph</option>
