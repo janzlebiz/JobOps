@@ -1,0 +1,28 @@
+{
+  "name": "jobops-radar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "JobOps Radar — Personal-first, multi-user-ready job opportunity intelligence PWA",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "workers/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@jobops/web",
+    "build:packages": "npm run build --workspace=@jobops/shared-types && npm run build --workspace=@jobops/validation && npm run build --workspace=@jobops/scoring && npm run build --workspace=@jobops/source-connectors && npm run build --workspace=@jobops/ai-prompts && npm run build --workspace=@jobops/worker-pipeline",
+    "build": "npm run build:packages && npm run build --workspace=@jobops/web",
+    "lint": "npm run build:packages && npm run lint --workspaces --if-present",
+    "typecheck": "npm run build:packages && npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
